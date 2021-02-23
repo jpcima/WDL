@@ -1094,21 +1094,21 @@ void WDL_Resampler::SetRates(double rate_in, double rate_out)
   }
 }
 
-template<class T> static void wdl_resampler_generate_sinc_lowpass(T *cfout, int wantsize, int wantinterp, double filtpos)
+template<class T> static void wdl_resampler_generate_sinc_lowpass(T *cfout, int filtsize, int slices, double filtpos)
 {
-  const double dwindowpos = 2.0 * PI/(double)wantsize;
+  const double dwindowpos = 2.0 * PI/(double)filtsize;
   const double dsincpos  = PI * filtpos; // filtpos is outrate/inrate, i.e. 0.5 is going to half rate
-  const int hwantsize=wantsize/2, hwantinterp=wantinterp/2;
+  const int hfiltsize=filtsize/2, hslices=slices/2;
 
   double filtpower=0.0;
   T *ptrout = cfout;
   int slice;
-  for (slice=0;slice<=hwantinterp;slice++)
+  for (slice=0;slice<=hslices;slice++)
   {
-    const double frac = slice / (double)wantinterp;
-    const int center_x = slice == 0 ? hwantsize : -1;
+    const double frac = slice / (double)slices;
+    const int center_x = slice == 0 ? hfiltsize : -1;
 
-    const int n = ((slice < hwantinterp) | (wantinterp & 1)) ? wantsize : hwantsize;
+    const int n = ((slice < hslices) | (slices & 1)) ? filtsize : hfiltsize;
     int x;
     for (x=0;x<n;x++)
     {
@@ -1121,7 +1121,7 @@ template<class T> static void wdl_resampler_generate_sinc_lowpass(T *cfout, int 
       {
         const double xfrac = frac + x;
         const double windowpos = dwindowpos * xfrac;
-        const double sincpos = dsincpos * (xfrac - hwantsize);
+        const double sincpos = dsincpos * (xfrac - hfiltsize);
 
         // blackman-harris * sinc
         const double val = (0.35875 - 0.48829 * cos(windowpos) + 0.14128 * cos(2*windowpos) - 0.01168 * cos(3*windowpos)) * sin(sincpos) / sincpos;
@@ -1132,8 +1132,8 @@ template<class T> static void wdl_resampler_generate_sinc_lowpass(T *cfout, int 
     }
   }
 
-  filtpower = wantinterp/(filtpower+1.0);
-  const int allocsize = wantsize*(wantinterp+1);
+  filtpower = slices/(filtpower+1.0);
+  const int allocsize = filtsize*(slices+1);
   const int n = allocsize/2;
   int x;
   for (x = 0; x < n; x ++)
