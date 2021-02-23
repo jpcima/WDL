@@ -139,7 +139,7 @@ template <class T1, class T2> static void inline SincSample(T1 *outptr, const T1
 template <class T1, class T2> static void inline SincSampleN(T1 *outptr, const T1 *inptr, double fracpos, int nch, const T2 *filter, int filtsz, int oversize)
 {
   const int ifpos=(int)(fracpos*oversize+0.5);
-  filter += (oversize-ifpos) * filtsz;
+  filter += (ifpos ? oversize-ifpos : 0) * filtsz;
 
   int x;
   for (x = 0; x < nch; x ++)
@@ -189,7 +189,7 @@ template <class T1, class T2> static void inline SincSample1N(T1 *outptr, const 
   const int ifpos=(int)(fracpos*oversize+0.5);
 
   double sum2=0.0;
-  const T2 *fptr2=filter + (oversize-ifpos) * filtsz;
+  const T2 *fptr2=filter + (ifpos ? oversize-ifpos : 0) * filtsz;
   const T1 *iptr=inptr;
   int i=filtsz/2;
   while (i--)
@@ -240,7 +240,7 @@ template <class T1, class T2> static void inline SincSample2N(T1 *outptr, const 
 {
   const int ifpos=(int)(fracpos*oversize+0.5);
 
-  const T2 *fptr2=filter + (oversize-ifpos) * filtsz;
+  const T2 *fptr2=filter + (ifpos ? oversize-ifpos : 0) * filtsz;
 
   double sumb=0.0;
   double sum2b=0.0;
@@ -319,7 +319,7 @@ static void inline SincSample(double *outptr, const double *inptr, double fracpo
 static void inline SincSampleN(double *outptr, const double *inptr, double fracpos, int nch, const float *filter, int filtsz, int oversize)
 {
   const int ifpos=(int)(fracpos*oversize+0.5);
-  filter += (oversize-ifpos) * filtsz;
+  filter += (ifpos ? oversize-ifpos : 0) * filtsz;
 
   int x;
   for (x = 0; x < nch; x ++)
@@ -455,7 +455,7 @@ static void inline SincSample1N(double *outptr, const double *inptr, double frac
   const int ifpos=(int)(fracpos*oversize+0.5);
 
   double sum2;
-  const float *fptr2=filter + (oversize-ifpos) * filtsz;
+  const float *fptr2=filter + (ifpos ? oversize-ifpos : 0) * filtsz;
   const double *iptr=inptr;
   int i=filtsz/2;
 
@@ -570,7 +570,7 @@ static void inline SincSample2N(double *outptr, const double *inptr, double frac
 {
   const int ifpos=(int)(fracpos*oversize+0.5);
 
-  const float *fptr2=filter + (oversize-ifpos) * filtsz;
+  const float *fptr2=filter + (ifpos ? oversize-ifpos : 0) * filtsz;
 
   double sumb, sum2b;
   const double *iptr=inptr;
@@ -697,7 +697,7 @@ static void inline SincSample(double *outptr, const double *inptr, double fracpo
 static void inline SincSampleN(double *outptr, const double *inptr, double fracpos, int nch, const double *filter, int filtsz, int oversize)
 {
   const int ifpos=(int)(fracpos*oversize+0.5);
-  filter += (oversize-ifpos) * filtsz;
+  filter += (ifpos ? oversize-ifpos : 0) * filtsz;
 
   int x;
   for (x = 0; x < nch; x ++)
@@ -831,7 +831,7 @@ static void inline SincSample1N(double *outptr, const double *inptr, double frac
   const int ifpos=(int)(fracpos*oversize+0.5);
 
   double sum2;
-  const double *fptr2=filter + (oversize-ifpos) * filtsz;
+  const double *fptr2=filter + (ifpos ? oversize-ifpos : 0) * filtsz;
   const double *iptr=inptr;
   int i=filtsz/2;
 
@@ -943,7 +943,7 @@ static void inline SincSample2N(double *outptr, const double *inptr, double frac
 {
   const int ifpos=(int)(fracpos*oversize+0.5);
 
-  const double *fptr2=filter + (oversize-ifpos) * filtsz;
+  const double *fptr2=filter + (ifpos ? oversize-ifpos : 0) * filtsz;
 
   double sumb, sum2b;
   const double *iptr=inptr;
@@ -1101,7 +1101,7 @@ template<class T> static void wdl_resampler_generate_sinc_lowpass(T *cfout, int 
   const int hfiltsize=filtsize/2, hslices=slices/2;
 
   double filtpower=0.0;
-  T *ptrout = cfout;
+  int wrpos = 0;
   for (int slice=0;slice<=hslices;slice++)
   {
     const double frac = slice / (double)slices;
@@ -1112,7 +1112,7 @@ template<class T> static void wdl_resampler_generate_sinc_lowpass(T *cfout, int 
     {
       if (x==center_x)
       {
-        *ptrout++ = 1.0;
+        cfout[wrpos++] = 1.0;
       }
       else
       {
@@ -1125,23 +1125,27 @@ template<class T> static void wdl_resampler_generate_sinc_lowpass(T *cfout, int 
         // sinc
         const double val = wind * sin(sincpos) / sincpos;
         filtpower += slice ? val*2 : val;
-        *ptrout++ = (T)val;
+        cfout[wrpos++] = (T)val;
       }
 
     }
   }
 
   filtpower = slices/(filtpower+1.0);
-  const int allocsize = filtsize*(slices+1);
-  const int n = allocsize/2;
-  int x;
-  for (x = 0; x < n; x ++)
-  {
-    cfout[x] = (T) (cfout[x]*filtpower);
-  }
 
-  int y;
-  for (x = n, y = n - 1; y >= 0; ++x, --y) cfout[x] = cfout[y];
+  int x = wrpos - 1, y = wrpos;
+  while (x >= filtsize)
+  {
+    const T v = (T) (cfout[x]*filtpower);
+    cfout[x--] = v;
+    cfout[y++] = v;
+  }
+  while (x >= 0)
+  {
+    const T v = (T) (cfout[x]*filtpower);
+    cfout[x--] = v;
+  }
+  WDL_ASSERT(y == slices*filtsize);
 }
 
 const WDL_SincFilterSample *WDL_Resampler::BuildLowPass(double filtpos, bool *isIdeal) // only called in sinc modes
@@ -1198,7 +1202,8 @@ const WDL_SincFilterSample *WDL_Resampler::BuildLowPass(double filtpos, bool *is
     }
   }
 
-  *isIdeal = ideal_interp == wantinterp;
+  const bool is_ideal = ideal_interp == wantinterp;
+  *isIdeal = is_ideal;
   if (m_filter_ratio!=filtpos || 
       m_filter_coeffs_size != wantsize ||
       m_lp_oversize != wantinterp)
@@ -1207,7 +1212,7 @@ const WDL_SincFilterSample *WDL_Resampler::BuildLowPass(double filtpos, bool *is
     m_filter_ratio=filtpos;
 
     // build lowpass filter
-    const int allocsize = wantsize*(m_lp_oversize+1);
+    const int allocsize = wantsize*(m_lp_oversize+(is_ideal ? 0 : 1));
     const int alignedsize = allocsize + 16/sizeof(WDL_SincFilterSample) - 1;
     if (m_filter_coeffs.ResizeOK(alignedsize))
     {
@@ -1215,6 +1220,12 @@ const WDL_SincFilterSample *WDL_Resampler::BuildLowPass(double filtpos, bool *is
       m_filter_coeffs_size=wantsize;
 
       wdl_resampler_generate_sinc_lowpass(cfout, wantsize,wantinterp, filtpos);
+
+      if (!is_ideal) // repeat/reverse first slice as last
+      {
+        WDL_SincFilterSample *wro = cfout + (wantinterp+1)*wantsize;
+        for (int x = 0; x < wantsize; x++) *--wro = cfout[x];
+      }
     }
     else m_filter_coeffs_size=0;
 
