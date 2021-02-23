@@ -1102,19 +1102,16 @@ template<class T> static void wdl_resampler_generate_sinc_lowpass(T *cfout, int 
 
   double filtpower=0.0;
   T *ptrout = cfout;
-  int slice;
-  for (slice=0;slice<=hslices;slice++)
+  for (int slice=0;slice<=hslices;slice++)
   {
     const double frac = slice / (double)slices;
     const int center_x = slice == 0 ? hfiltsize : -1;
 
-    const int n = ((slice < hslices) | (slices & 1)) ? filtsize : hfiltsize;
-    int x;
-    for (x=0;x<n;x++)
+    const int n = slice == hslices && !(slices&1) ? hfiltsize : filtsize;
+    for (int x=0;x<n;x++)
     {
       if (x==center_x)
       {
-        // we know this will be 1.0
         *ptrout++ = 1.0;
       }
       else
@@ -1123,8 +1120,10 @@ template<class T> static void wdl_resampler_generate_sinc_lowpass(T *cfout, int 
         const double windowpos = dwindowpos * xfrac;
         const double sincpos = dsincpos * (xfrac - hfiltsize);
 
-        // blackman-harris * sinc
-        const double val = (0.35875 - 0.48829 * cos(windowpos) + 0.14128 * cos(2*windowpos) - 0.01168 * cos(3*windowpos)) * sin(sincpos) / sincpos;
+        // blackman-harris
+        const double wind = (0.35875 - 0.48829 * cos(windowpos) + 0.14128 * cos(2*windowpos) - 0.01168 * cos(3*windowpos));
+        // sinc
+        const double val = wind * sin(sincpos) / sincpos;
         filtpower += slice ? val*2 : val;
         *ptrout++ = (T)val;
       }
