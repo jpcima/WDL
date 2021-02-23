@@ -1094,6 +1094,56 @@ void WDL_Resampler::SetRates(double rate_in, double rate_out)
   }
 }
 
+template<class T> static void wdl_resampler_generate_sinc_lowpass(T *cfout, int wantsize, int wantinterp, double filtpos)
+{
+  const double dwindowpos = 2.0 * PI/(double)wantsize;
+  const double dsincpos  = PI * filtpos; // filtpos is outrate/inrate, i.e. 0.5 is going to half rate
+  const int hwantsize=wantsize/2, hwantinterp=wantinterp/2;
+
+  double filtpower=0.0;
+  T *ptrout = cfout;
+  int slice;
+  for (slice=0;slice<=hwantinterp;slice++)
+  {
+    const double frac = slice / (double)wantinterp;
+    const int center_x = slice == 0 ? hwantsize : -1;
+
+    const int n = ((slice < hwantinterp) | (wantinterp & 1)) ? wantsize : hwantsize;
+    int x;
+    for (x=0;x<n;x++)
+    {
+      if (x==center_x)
+      {
+        // we know this will be 1.0
+        *ptrout++ = 1.0;
+      }
+      else
+      {
+        const double xfrac = frac + x;
+        const double windowpos = dwindowpos * xfrac;
+        const double sincpos = dsincpos * (xfrac - hwantsize);
+
+        // blackman-harris * sinc
+        const double val = (0.35875 - 0.48829 * cos(windowpos) + 0.14128 * cos(2*windowpos) - 0.01168 * cos(3*windowpos)) * sin(sincpos) / sincpos;
+        filtpower += slice ? val*2 : val;
+        *ptrout++ = (T)val;
+      }
+
+    }
+  }
+
+  filtpower = wantinterp/(filtpower+1.0);
+  const int allocsize = wantsize*(wantinterp+1);
+  const int n = allocsize/2;
+  int x;
+  for (x = 0; x < n; x ++)
+  {
+    cfout[x] = (T) (cfout[x]*filtpower);
+  }
+
+  int y;
+  for (x = n, y = n - 1; y >= 0; ++x, --y) cfout[x] = cfout[y];
+}
 
 const WDL_SincFilterSample *WDL_Resampler::BuildLowPass(double filtpos, bool *isIdeal) // only called in sinc modes
 {
@@ -1165,52 +1215,7 @@ const WDL_SincFilterSample *WDL_Resampler::BuildLowPass(double filtpos, bool *is
       WDL_SincFilterSample *cfout=m_filter_coeffs.GetAligned(16);
       m_filter_coeffs_size=wantsize;
 
-      const double dwindowpos = 2.0 * PI/(double)wantsize;
-      const double dsincpos  = PI * filtpos; // filtpos is outrate/inrate, i.e. 0.5 is going to half rate
-      const int hwantsize=wantsize/2, hwantinterp=wantinterp/2;
-
-      double filtpower=0.0;
-      WDL_SincFilterSample *ptrout = cfout;
-      int slice;
-      for (slice=0;slice<=hwantinterp;slice++)
-      {
-        const double frac = slice / (double)wantinterp;
-        const int center_x = slice == 0 ? hwantsize : -1;
-
-        const int n = ((slice < hwantinterp) | (wantinterp & 1)) ? wantsize : hwantsize;
-        int x;
-        for (x=0;x<n;x++)
-        {          
-          if (x==center_x) 
-          {
-            // we know this will be 1.0
-            *ptrout++ = 1.0;
-          }
-          else
-          {
-            const double xfrac = frac + x;
-            const double windowpos = dwindowpos * xfrac;
-            const double sincpos = dsincpos * (xfrac - hwantsize);
-
-            // blackman-harris * sinc
-            const double val = (0.35875 - 0.48829 * cos(windowpos) + 0.14128 * cos(2*windowpos) - 0.01168 * cos(3*windowpos)) * sin(sincpos) / sincpos; 
-            filtpower += slice ? val*2 : val;
-            *ptrout++ = (WDL_SincFilterSample)val;
-          }
-
-        }
-      }
-
-      filtpower = wantinterp/(filtpower+1.0);
-      const int n = allocsize/2;
-      int x;
-      for (x = 0; x < n; x ++)
-      {
-        cfout[x] = (WDL_SincFilterSample) (cfout[x]*filtpower);
-      }
-
-      int y;
-      for (x = n, y = n - 1; y >= 0; ++x, --y) cfout[x] = cfout[y];
+      wdl_resampler_generate_sinc_lowpass(cfout, wantsize,wantinterp, filtpos);
     }
     else m_filter_coeffs_size=0;
 
