@@ -44,22 +44,24 @@
 class WDL_Resampler::WDL_Resampler_IIRFilter
 {
 public:
-  WDL_Resampler_IIRFilter() 
-  { 
-    m_fpos=-1;
-    Reset(); 
-  }
-  ~WDL_Resampler_IIRFilter()
-  {
-  }
+  WDL_Resampler_IIRFilter() : m_fpos(-1.0) { }
 
   void Reset() 
   { 
-    memset(m_hist,0,sizeof(m_hist)); 
+    memset(m_hist.Get(),0,m_hist.GetSize() * sizeof(double));
   }
 
-  void setParms(double fpos, double Q)
+  void setParms(double fpos, double Q, int hist_sz)
   {
+    hist_sz *= 4;
+    if (m_hist.GetSize() != hist_sz)
+    {
+      const int oldsz = m_hist.GetSize();
+      double *p = m_hist.Resize(hist_sz,false);
+      if (m_hist.GetSize() > oldsz)
+        memset(p+oldsz,0,(m_hist.GetSize() - oldsz)*sizeof(double));
+    }
+
     if (fabs(fpos-m_fpos)<0.000001) return;
     m_fpos=fpos;
 
@@ -80,8 +82,8 @@ public:
   void Apply(WDL_ResampleSample *in1, WDL_ResampleSample *out1, int ns, int span, int w)
   {
     double b0=m_b0,b1=m_b1,b2=m_b2,a1=m_a1,a2=m_a2;
-    double hist[4];
-    memcpy(hist,&m_hist[w][0], sizeof(hist));
+    double *hsave = m_hist.Get() + w*4, hist[4];
+    memcpy(hist,hsave, sizeof(hist));
     while (ns--)
     {
       double in=*in1;
@@ -92,14 +94,15 @@ public:
 
       out1+=span;
     }
-    memcpy(&m_hist[w][0], hist, sizeof(hist));
+    memcpy(hsave, hist, sizeof(hist));
   }
 
 private:
   double m_fpos;
   double m_a1,m_a2;
   double m_b0,m_b1,m_b2;
-  double m_hist[WDL_RESAMPLE_MAX_FILTERS*WDL_RESAMPLE_MAX_NCH][4];
+
+  WDL_TypedBuf<double> m_hist;
 };
 
 
@@ -1060,7 +1063,7 @@ void WDL_Resampler::SetMode(bool interp, int filtercnt, bool sinc, int sinc_size
   m_sincsize = sinc && sinc_size>= 4 ? sinc_size > 8192 ? 8192 : (sinc_size&~1) : 0;
   m_sincoversize = m_sincsize  ? (sinc_interpsize<= 1 ? 1 : sinc_interpsize>=8192 ? 8192 : sinc_interpsize) : 1;
 
-  m_filtercnt = m_sincsize ? 0 : (filtercnt<=0?0 : filtercnt >= WDL_RESAMPLE_MAX_FILTERS ? WDL_RESAMPLE_MAX_FILTERS : filtercnt);
+  m_filtercnt = m_sincsize ? 0 : wdl_max(filtercnt,0);
   m_interp=interp && !m_sincsize;
 //  char buf[512];
 //  sprintf(buf,"setting interp=%d, filtercnt=%d, sinc=%d,%d\n",m_interp,m_filtercnt,m_sincsize,m_sincoversize);
@@ -1225,7 +1228,7 @@ double WDL_Resampler::GetCurrentLatency()
 
 int WDL_Resampler::ResamplePrepare(int out_samples, int nch, WDL_ResampleSample **inbuffer) 
 {   
-  if (nch > WDL_RESAMPLE_MAX_NCH || nch < 1) return 0;
+  if (nch < 1) return 0;
 
   int fsize=0;
   if (m_sincsize>1) fsize = m_sincsize;
@@ -1276,7 +1279,7 @@ again:
 
 int WDL_Resampler::ResampleOut(WDL_ResampleSample *out, int nsamples_in, int nsamples_out, int nch)
 {
-  if (nch > WDL_RESAMPLE_MAX_NCH || nch < 1) return 0;
+  if (nch < 1) return 0;
 #ifdef WDL_DENORMAL_WANTS_SCOPED_FTZ
   WDL_denormal_ftz_scope ftz_force;
 #endif
@@ -1287,8 +1290,8 @@ int WDL_Resampler::ResampleOut(WDL_ResampleSample *out, int nsamples_in, int nsa
     {
       if (!m_iirfilter) m_iirfilter = new WDL_Resampler_IIRFilter;
 
-      int n=m_filtercnt;
-      m_iirfilter->setParms((1.0/m_ratio)*m_filterpos,m_filterq);
+      const int n=m_filtercnt;
+      m_iirfilter->setParms((1.0/m_ratio)*m_filterpos,m_filterq, n*nch);
 
       WDL_ResampleSample *buf=(WDL_ResampleSample *)m_rsinbuf.Get() + m_samples_in_rsinbuf*nch;
       int a,x;
@@ -1539,8 +1542,8 @@ int WDL_Resampler::ResampleOut(WDL_ResampleSample *out, int nsamples_in, int nsa
     if (m_ratio < 1.0 && ret>0) // filter output
     {
       if (!m_iirfilter) m_iirfilter = new WDL_Resampler_IIRFilter;
-      int n=m_filtercnt;
-      m_iirfilter->setParms(m_ratio*m_filterpos,m_filterq);
+      const int n=m_filtercnt;
+      m_iirfilter->setParms(m_ratio*m_filterpos,m_filterq, n*nch);
 
       int x,a;
       int offs=0;

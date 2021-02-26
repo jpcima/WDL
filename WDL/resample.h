@@ -45,15 +45,6 @@ typedef double WDL_ResampleSample;
 #endif
 
 
-#ifndef WDL_RESAMPLE_MAX_FILTERS
-#define WDL_RESAMPLE_MAX_FILTERS 4
-#endif
-
-#ifndef WDL_RESAMPLE_MAX_NCH
-#define WDL_RESAMPLE_MAX_NCH 64
-#endif
-
-
 class WDL_Resampler
 {
 public:
