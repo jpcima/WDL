@@ -1221,10 +1221,21 @@ const WDL_SincFilterSample *WDL_Resampler::BuildLowPass(double filtpos, bool *is
 
       wdl_resampler_generate_sinc_lowpass(cfout, wantsize,wantinterp, filtpos);
 
-      if (!is_ideal) // repeat/reverse first slice as last
+      if (!is_ideal)
       {
+        // sinc interpolation mode: repeat/reverse first slice as last
         WDL_SincFilterSample *wro = cfout + (wantinterp+1)*wantsize;
         for (int x = 0; x < wantsize; x++) *--wro = cfout[x];
+      }
+      else
+      {
+        // ideal sinc mode: reverse first slice in-place, put 1.0-value at wantsz/2-1 rather than wantsz/2
+        for (int x = 0; x < wantsize/2; x++)
+        {
+          const WDL_SincFilterSample v = cfout[x];
+          cfout[x] = cfout[wantsize-1-x];
+          cfout[wantsize-1-x] = v;
+        }
       }
     }
     else m_filter_coeffs_size=0;
