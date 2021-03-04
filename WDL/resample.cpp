@@ -136,11 +136,8 @@ template <class T1, class T2> static void inline SincSample(T1 *outptr, const T1
 
 }
 
-template <class T1, class T2> static void inline SincSampleN(T1 *outptr, const T1 *inptr, double fracpos, int nch, const T2 *filter, int filtsz, int oversize)
+template <class T1, class T2> static void inline SincSampleN(T1 *outptr, const T1 *inptr, int nch, const T2 *filter, int filtsz, int oversize)
 {
-  const int ifpos=(int)(fracpos*oversize+0.5);
-  filter += (ifpos ? oversize-ifpos : 0) * filtsz;
-
   int x;
   for (x = 0; x < nch; x ++)
   {
@@ -184,12 +181,9 @@ template <class T1, class T2> static void inline SincSample1(T1 *outptr, const T
   outptr[0]=sum*fracpos+sum2*(1.0-fracpos);
 }
 
-template <class T1, class T2> static void inline SincSample1N(T1 *outptr, const T1 *inptr, double fracpos, const T2 *filter, int filtsz, int oversize)
+template <class T1, class T2> static void inline SincSample1N(T1 *outptr, const T1 *inptr, const T2 *fptr2, int filtsz, int oversize)
 {
-  const int ifpos=(int)(fracpos*oversize+0.5);
-
   double sum2=0.0;
-  const T2 *fptr2=filter + (ifpos ? oversize-ifpos : 0) * filtsz;
   const T1 *iptr=inptr;
   int i=filtsz/2;
   while (i--)
@@ -236,12 +230,8 @@ template <class T1, class T2> static void inline SincSample2(T1 *outptr, const T
 
 }
 
-template <class T1, class T2> static void inline SincSample2N(T1 *outptr, const T1 *inptr, double fracpos, const T2 *filter, int filtsz, int oversize)
+template <class T1, class T2> static void inline SincSample2N(T1 *outptr, const T1 *inptr, const T2 *fptr2, int filtsz, int oversize)
 {
-  const int ifpos=(int)(fracpos*oversize+0.5);
-
-  const T2 *fptr2=filter + (ifpos ? oversize-ifpos : 0) * filtsz;
-
   double sumb=0.0;
   double sum2b=0.0;
   const T1 *iptr=inptr;
@@ -316,11 +306,8 @@ static void inline SincSample(double *outptr, const double *inptr, double fracpo
 
 }
 
-static void inline SincSampleN(double *outptr, const double *inptr, double fracpos, int nch, const float *filter, int filtsz, int oversize)
+static void inline SincSampleN(double *outptr, const double *inptr, int nch, const float *filter, int filtsz, int oversize)
 {
-  const int ifpos=(int)(fracpos*oversize+0.5);
-  filter += (ifpos ? oversize-ifpos : 0) * filtsz;
-
   int x;
   for (x = 0; x < nch; x ++)
   {
@@ -450,12 +437,9 @@ static void inline SincSample1(double *outptr, const double *inptr, double fracp
   outptr[0]=sum*fracpos+sum2*(1.0-fracpos);
 }
 
-static void inline SincSample1N(double *outptr, const double *inptr, double fracpos, const float *filter, int filtsz, int oversize)
+static void inline SincSample1N(double *outptr, const double *inptr, const float *fptr2, int filtsz, int oversize)
 {
-  const int ifpos=(int)(fracpos*oversize+0.5);
-
   double sum2;
-  const float *fptr2=filter + (ifpos ? oversize-ifpos : 0) * filtsz;
   const double *iptr=inptr;
   int i=filtsz/2;
 
@@ -566,12 +550,8 @@ static void inline SincSample2(double *outptr, const double *inptr, double fracp
   outptr[1]=sum2*fracpos + sum2b*(1.0-fracpos);
 }
 
-static void inline SincSample2N(double *outptr, const double *inptr, double fracpos, const float *filter, int filtsz, int oversize)
+static void inline SincSample2N(double *outptr, const double *inptr, const float *fptr2, int filtsz, int oversize)
 {
-  const int ifpos=(int)(fracpos*oversize+0.5);
-
-  const float *fptr2=filter + (ifpos ? oversize-ifpos : 0) * filtsz;
-
   double sumb, sum2b;
   const double *iptr=inptr;
   int i=filtsz/2;
@@ -694,11 +674,8 @@ static void inline SincSample(double *outptr, const double *inptr, double fracpo
 
 }
 
-static void inline SincSampleN(double *outptr, const double *inptr, double fracpos, int nch, const double *filter, int filtsz, int oversize)
+static void inline SincSampleN(double *outptr, const double *inptr, int nch, const double *filter, int filtsz, int oversize)
 {
-  const int ifpos=(int)(fracpos*oversize+0.5);
-  filter += (ifpos ? oversize-ifpos : 0) * filtsz;
-
   int x;
   for (x = 0; x < nch; x ++)
   {
@@ -826,12 +803,9 @@ static void inline SincSample1(double *outptr, const double *inptr, double fracp
   outptr[0]=sum*fracpos+sum2*(1.0-fracpos);
 }
 
-static void inline SincSample1N(double *outptr, const double *inptr, double fracpos, const double *filter, int filtsz, int oversize)
+static void inline SincSample1N(double *outptr, const double *inptr, const double *fptr2, int filtsz, int oversize)
 {
-  const int ifpos=(int)(fracpos*oversize+0.5);
-
   double sum2;
-  const double *fptr2=filter + (ifpos ? oversize-ifpos : 0) * filtsz;
   const double *iptr=inptr;
   int i=filtsz/2;
 
@@ -939,12 +913,8 @@ static void inline SincSample2(double *outptr, const double *inptr, double fracp
   outptr[1]=sum2*fracpos + sum2b*(1.0-fracpos);
 }
 
-static void inline SincSample2N(double *outptr, const double *inptr, double fracpos, const double *filter, int filtsz, int oversize)
+static void inline SincSample2N(double *outptr, const double *inptr, const double *fptr2, int filtsz, int oversize)
 {
-  const int ifpos=(int)(fracpos*oversize+0.5);
-
-  const double *fptr2=filter + (ifpos ? oversize-ifpos : 0) * filtsz;
-
   double sumb, sum2b;
   const double *iptr=inptr;
   int i=filtsz/2;
@@ -1369,17 +1339,24 @@ int WDL_Resampler::ResampleOut(WDL_ResampleSample *out, int nsamples_in, int nsa
     int filtlen = rsinbuf_availtemp - filtsz;
     outlatadj=filtsz/2-1;
 
+#define IDEAL_FILT_CALC \
+    int ipos = (int) srcpos; \
+    int filter_offs=(int)((srcpos - ipos)*oversize+0.5); \
+    if (filter_offs) { \
+      filter_offs = (oversize-filter_offs)*filtsz; \
+      if (!filter_offs) ipos++; \
+    } \
+    if (ipos >= filtlen-1) break;
+
     if (WDL_NOT_NORMALLY(!filter)) {} 
     else if (nch == 1)
     {
       if (isideal)
         while (ns--)
         {
-          int ipos = (int)srcpos;
+          IDEAL_FILT_CALC
 
-          if (ipos >= filtlen-1)  break; // quit decoding, not enough input samples
-
-          SincSample1N(outptr,localin + ipos,srcpos-ipos,filter,filtsz,oversize);
+          SincSample1N(outptr,localin + ipos,filter + filter_offs,filtsz,oversize);
           outptr ++;
           srcpos+=drspos;
           ret++;
@@ -1402,11 +1379,9 @@ int WDL_Resampler::ResampleOut(WDL_ResampleSample *out, int nsamples_in, int nsa
       if (isideal)
         while (ns--)
         {
-          int ipos = (int)srcpos;
+          IDEAL_FILT_CALC
 
-          if (ipos >= filtlen-1) break; // quit decoding, not enough input samples
-
-          SincSample2N(outptr,localin + ipos*2,srcpos-ipos,filter,filtsz,oversize);
+          SincSample2N(outptr,localin + ipos*2,filter + filter_offs,filtsz,oversize);
           outptr+=2;
           srcpos+=drspos;
           ret++;
@@ -1429,11 +1404,9 @@ int WDL_Resampler::ResampleOut(WDL_ResampleSample *out, int nsamples_in, int nsa
       if (isideal)
         while (ns--)
         {
-          int ipos = (int)srcpos;
+          IDEAL_FILT_CALC
 
-          if (ipos >= filtlen-1)  break; // quit decoding, not enough input samples
-
-          SincSampleN(outptr,localin + ipos*nch,srcpos-ipos,nch,filter,filtsz,oversize);
+          SincSampleN(outptr,localin + ipos*nch,nch,filter + filter_offs,filtsz,oversize);
           outptr += nch;
           srcpos+=drspos;
           ret++;
@@ -1451,6 +1424,7 @@ int WDL_Resampler::ResampleOut(WDL_ResampleSample *out, int nsamples_in, int nsa
           ret++;
         }
     }
+#undef IDEAL_FILT_CALC
   }
   else if (!m_interp) // point sampling
   {
